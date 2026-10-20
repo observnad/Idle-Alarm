@@ -99,8 +99,16 @@ public class IdleAlarmPlugin extends Plugin
 
 			if (config.getIdleAlarmVolume() > 0)
 			{
-				preferences.setSoundEffectVolume(config.getIdleAlarmVolume());
-				client.playSoundEffect(SoundEffectID.GE_INCREMENT_PLOP, config.getIdleAlarmVolume());
+				IdleAlarmSound sound = config.getIdleAlarmSound();
+				int soundId = sound == IdleAlarmSound.CUSTOM
+					? config.getCustomSoundId()
+					: (sound != null ? sound.getSoundId() : SoundEffectID.GE_INCREMENT_PLOP);
+
+				if (soundId > 0)
+				{
+					preferences.setSoundEffectVolume(config.getIdleAlarmVolume());
+					client.playSoundEffect(soundId, config.getIdleAlarmVolume());
+				}
 			}
 
 			preferences.setSoundEffectVolume(previousVolume);

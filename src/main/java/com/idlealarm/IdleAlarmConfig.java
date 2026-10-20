@@ -54,4 +54,26 @@ public interface IdleAlarmConfig extends Config
 	{
 		return SoundEffectVolume.MEDIUM_HIGH;
 	}
+
+	@ConfigItem(
+			keyName = "sound",
+			name = "Alarm sound",
+			description = "Configures the sound played while idle.",
+			position = 5
+	)
+	default IdleAlarmSound getIdleAlarmSound()
+	{
+		return IdleAlarmSound.PLOP;
+	}
+
+	@ConfigItem(
+			keyName = "customsoundid",
+			name = "Custom sound ID",
+			description = "Sound effect ID to play when Custom sound is selected.",
+			position = 6
+	)
+	default int getCustomSoundId()
+	{
+		return 2131;
+	}
 }

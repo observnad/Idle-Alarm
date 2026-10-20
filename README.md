@@ -10,3 +10,7 @@ Number of milliseconds between each alarm sound
 Number of milliseconds the alarm will ring continuously
 ### Alarm volume
 How loud the alarm sound will play
+### Alarm sound
+Sound to play while idle
+### Custom sound ID
+Sound effect ID to play when Custom sound is selected

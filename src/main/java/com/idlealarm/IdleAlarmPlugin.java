@@ -11,16 +11,13 @@ import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 
-import java.time.Duration;
-import java.time.Instant;
-
 import static net.runelite.api.AnimationID.IDLE;
 
 @Slf4j
 @PluginDescriptor(
-		name = "Idle Alarm",
-		description = "Plays alarm while player is idle",
-		tags = {"idle", "tick", "animation", "alarm"}
+	name = "Idle Alarm",
+	description = "Plays alarm while player is idle",
+	tags = {"idle", "tick", "animation", "alarm"}
 )
 public class IdleAlarmPlugin extends Plugin
 {
@@ -30,8 +27,8 @@ public class IdleAlarmPlugin extends Plugin
 	@Inject
 	private IdleAlarmConfig config;
 
-	private Instant lastAnimating;
-	private Instant lastAlarming = Instant.now();
+	private long lastAnimating;
+	private long lastAlarming;
 
 	@Provides
 	IdleAlarmConfig provideConfig(ConfigManager configManager)
@@ -39,27 +36,62 @@ public class IdleAlarmPlugin extends Plugin
 		return configManager.getConfig(IdleAlarmConfig.class);
 	}
 
-	@Subscribe
-	public void onClientTick(ClientTick tick) {
-		Player localPlayer = client.getLocalPlayer();
-		int idlePose = localPlayer.getIdlePoseAnimation();
-		int pose = localPlayer.getPoseAnimation();
-		int animation = localPlayer.getAnimation();
+	@Override
+	protected void shutDown() throws Exception
+	{
+		lastAnimating = 0;
+		lastAlarming = 0;
+	}
 
-		if (!(animation == IDLE && pose == idlePose)) {
-			lastAnimating = Instant.now();
+	@Subscribe
+	public void onGameStateChanged(GameStateChanged event)
+	{
+		if (event.getGameState() != GameState.LOGGED_IN)
+		{
+			lastAnimating = 0;
+			lastAlarming = 0;
+		}
+	}
+
+	@Subscribe
+	public void onClientTick(ClientTick tick)
+	{
+		if (client.getGameState() != GameState.LOGGED_IN)
+		{
 			return;
 		}
 
-		final Duration alarmDelay = Duration.ofMillis(config.getIdleAlarmDelay());
-		final Duration alarmSpeed = Duration.ofMillis(config.getIdleAlarmSpeed());
-		final int maxDuration = config.getIdleAlarmDuration();
-		final Duration alarmEnd = alarmDelay.plus(Duration.ofMillis(maxDuration));
+		Player localPlayer = client.getLocalPlayer();
+		if (localPlayer == null)
+		{
+			return;
+		}
 
-		// When player is idle and alarm should sound
-		if (Instant.now().compareTo(lastAnimating.plus(alarmDelay)) >= 0
-				&& Instant.now().compareTo(lastAlarming.plus(alarmSpeed)) >= 0
-				&& (maxDuration == 0 || Instant.now().compareTo(lastAnimating.plus(alarmEnd)) <= 0 )) {
+		int idlePose = localPlayer.getIdlePoseAnimation();
+		int pose = localPlayer.getPoseAnimation();
+		int animation = localPlayer.getAnimation();
+		long now = System.currentTimeMillis();
+
+		if (!(animation == IDLE && pose == idlePose))
+		{
+			lastAnimating = now;
+			return;
+		}
+
+		if (lastAnimating == 0)
+		{
+			lastAnimating = now;
+			return;
+		}
+
+		final int alarmDelay = config.getIdleAlarmDelay();
+		final int alarmSpeed = config.getIdleAlarmSpeed();
+		final int maxDuration = config.getIdleAlarmDuration();
+
+		if (now - lastAnimating >= alarmDelay
+			&& now - lastAlarming >= alarmSpeed
+			&& (maxDuration == 0 || now - lastAnimating <= alarmDelay + maxDuration))
+		{
 			// As playSoundEffect only uses the volume argument when the in-game volume isn't muted, sound effect volume
 			// needs to be set to the value desired for the alarm and afterwards reset to the previous value.
 			Preferences preferences = client.getPreferences();
@@ -72,7 +104,7 @@ public class IdleAlarmPlugin extends Plugin
 			}
 
 			preferences.setSoundEffectVolume(previousVolume);
-			lastAlarming = Instant.now();
+			lastAlarming = now;
 		}
 	}
 }

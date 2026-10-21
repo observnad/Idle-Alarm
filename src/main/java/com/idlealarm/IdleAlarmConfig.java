@@ -15,16 +15,23 @@ public interface IdleAlarmConfig extends Config
 	int VOLUME_MAX = SoundEffectVolume.HIGH;
 
 	@ConfigSection(
+			name = "Activity Detection",
+			description = "Configuration for resetting the alarm on player activity.",
+			position = 4
+	)
+	String activitySection = "activitySection";
+
+	@ConfigSection(
 			name = "Sound",
 			description = "Configuration for sound alarm.",
-			position = 4
+			position = 5
 	)
 	String soundSection = "soundSection";
 
 	@ConfigSection(
 			name = "Visual",
 			description = "Configuration for visual flicker alarm.",
-			position = 5
+			position = 6
 	)
 	String visualSection = "visualSection";
 
@@ -56,6 +63,30 @@ public interface IdleAlarmConfig extends Config
 	default int getIdleAlarmDuration()
 	{
 		return 0;
+	}
+
+	@ConfigItem(
+			keyName = "resetonmousemovement",
+			name = "Mouse movement",
+			description = "Resets the alarm delay when moving the mouse cursor.",
+			section = activitySection,
+			position = 1
+	)
+	default boolean resetOnMouseMovement()
+	{
+		return false;
+	}
+
+	@ConfigItem(
+			keyName = "resetoninput",
+			name = "Clicks & keystrokes",
+			description = "Resets the alarm delay on mouse clicks or key presses.",
+			section = activitySection,
+			position = 2
+	)
+	default boolean resetOnClicksAndKeystrokes()
+	{
+		return false;
 	}
 
 	@ConfigItem(

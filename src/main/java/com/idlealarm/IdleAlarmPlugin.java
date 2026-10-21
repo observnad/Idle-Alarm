@@ -1,6 +1,9 @@
 package com.idlealarm;
 
 import com.google.inject.Provides;
+import java.awt.event.KeyEvent;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseWheelEvent;
 import javax.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.*;
@@ -8,6 +11,11 @@ import net.runelite.api.events.ClientTick;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
+import net.runelite.client.input.KeyListener;
+import net.runelite.client.input.KeyManager;
+import net.runelite.client.input.MouseListener;
+import net.runelite.client.input.MouseManager;
+import net.runelite.client.input.MouseWheelListener;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.overlay.OverlayManager;
@@ -20,7 +28,7 @@ import static net.runelite.api.AnimationID.IDLE;
 	description = "Plays alarm while player is idle",
 	tags = {"idle", "tick", "animation", "alarm"}
 )
-public class IdleAlarmPlugin extends Plugin
+public class IdleAlarmPlugin extends Plugin implements KeyListener, MouseListener, MouseWheelListener
 {
 	@Inject
 	private Client client;
@@ -34,7 +42,13 @@ public class IdleAlarmPlugin extends Plugin
 	@Inject
 	private IdleAlarmOverlay overlay;
 
-	private long lastAnimating;
+	@Inject
+	private KeyManager keyManager;
+
+	@Inject
+	private MouseManager mouseManager;
+
+	private volatile long lastAnimating;
 	private long lastAlarming;
 
 	@Provides
@@ -47,12 +61,18 @@ public class IdleAlarmPlugin extends Plugin
 	protected void startUp() throws Exception
 	{
 		overlayManager.add(overlay);
+		keyManager.registerKeyListener(this);
+		mouseManager.registerMouseListener(this);
+		mouseManager.registerMouseWheelListener(this);
 	}
 
 	@Override
 	protected void shutDown() throws Exception
 	{
 		overlayManager.remove(overlay);
+		keyManager.unregisterKeyListener(this);
+		mouseManager.unregisterMouseListener(this);
+		mouseManager.unregisterMouseWheelListener(this);
 		lastAnimating = 0;
 		lastAlarming = 0;
 	}
@@ -159,5 +179,96 @@ public class IdleAlarmPlugin extends Plugin
 
 		return now - lastAnimating >= alarmDelay
 			&& (maxDuration == 0 || now - lastAnimating <= alarmDelay + maxDuration);
+	}
+
+	@Override
+	public void keyTyped(KeyEvent e)
+	{
+	}
+
+	@Override
+	public void keyPressed(KeyEvent e)
+	{
+		if (config.resetOnClicksAndKeystrokes())
+		{
+			resetDelay();
+		}
+	}
+
+	@Override
+	public void keyReleased(KeyEvent e)
+	{
+	}
+
+	@Override
+	public MouseEvent mouseClicked(MouseEvent mouseEvent)
+	{
+		return mouseEvent;
+	}
+
+	@Override
+	public MouseEvent mousePressed(MouseEvent mouseEvent)
+	{
+		if (config.resetOnClicksAndKeystrokes())
+		{
+			resetDelay();
+		}
+		return mouseEvent;
+	}
+
+	@Override
+	public MouseEvent mouseReleased(MouseEvent mouseEvent)
+	{
+		return mouseEvent;
+	}
+
+	@Override
+	public MouseEvent mouseEntered(MouseEvent mouseEvent)
+	{
+		return mouseEvent;
+	}
+
+	@Override
+	public MouseEvent mouseExited(MouseEvent mouseEvent)
+	{
+		return mouseEvent;
+	}
+
+	@Override
+	public MouseEvent mouseDragged(MouseEvent mouseEvent)
+	{
+		if (config.resetOnMouseMovement())
+		{
+			resetDelay();
+		}
+		return mouseEvent;
+	}
+
+	@Override
+	public MouseEvent mouseMoved(MouseEvent mouseEvent)
+	{
+		if (config.resetOnMouseMovement())
+		{
+			resetDelay();
+		}
+		return mouseEvent;
+	}
+
+	@Override
+	public MouseWheelEvent mouseWheelMoved(MouseWheelEvent mouseWheelEvent)
+	{
+		if (config.resetOnClicksAndKeystrokes())
+		{
+			resetDelay();
+		}
+		return mouseWheelEvent;
+	}
+
+	private void resetDelay()
+	{
+		if (client.getGameState() == GameState.LOGGED_IN)
+		{
+			lastAnimating = System.currentTimeMillis();
+		}
 	}
 }

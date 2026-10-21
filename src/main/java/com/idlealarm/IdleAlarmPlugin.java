@@ -10,6 +10,7 @@ import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
+import net.runelite.client.ui.overlay.OverlayManager;
 
 import static net.runelite.api.AnimationID.IDLE;
 
@@ -27,6 +28,12 @@ public class IdleAlarmPlugin extends Plugin
 	@Inject
 	private IdleAlarmConfig config;
 
+	@Inject
+	private OverlayManager overlayManager;
+
+	@Inject
+	private IdleAlarmOverlay overlay;
+
 	private long lastAnimating;
 	private long lastAlarming;
 
@@ -37,8 +44,15 @@ public class IdleAlarmPlugin extends Plugin
 	}
 
 	@Override
+	protected void startUp() throws Exception
+	{
+		overlayManager.add(overlay);
+	}
+
+	@Override
 	protected void shutDown() throws Exception
 	{
+		overlayManager.remove(overlay);
 		lastAnimating = 0;
 		lastAlarming = 0;
 	}
@@ -92,13 +106,13 @@ public class IdleAlarmPlugin extends Plugin
 			&& now - lastAlarming >= alarmSpeed
 			&& (maxDuration == 0 || now - lastAnimating <= alarmDelay + maxDuration))
 		{
-			// As playSoundEffect only uses the volume argument when the in-game volume isn't muted, sound effect volume
-			// needs to be set to the value desired for the alarm and afterwards reset to the previous value.
-			Preferences preferences = client.getPreferences();
-			int previousVolume = preferences.getSoundEffectVolume();
-
-			if (config.getIdleAlarmVolume() > 0)
+			if (config.isSoundEnabled() && config.getIdleAlarmVolume() > 0)
 			{
+				// As playSoundEffect only uses the volume argument when the in-game volume isn't muted, sound effect volume
+				// needs to be set to the value desired for the alarm and afterwards reset to the previous value.
+				Preferences preferences = client.getPreferences();
+				int previousVolume = preferences.getSoundEffectVolume();
+
 				IdleAlarmSound sound = config.getIdleAlarmSound();
 				int soundId = sound == IdleAlarmSound.CUSTOM
 					? config.getCustomSoundId()
@@ -109,10 +123,41 @@ public class IdleAlarmPlugin extends Plugin
 					preferences.setSoundEffectVolume(config.getIdleAlarmVolume());
 					client.playSoundEffect(soundId, config.getIdleAlarmVolume());
 				}
+
+				preferences.setSoundEffectVolume(previousVolume);
 			}
 
-			preferences.setSoundEffectVolume(previousVolume);
 			lastAlarming = now;
 		}
+	}
+
+	boolean isAlarming()
+	{
+		if (client.getGameState() != GameState.LOGGED_IN)
+		{
+			return false;
+		}
+
+		Player localPlayer = client.getLocalPlayer();
+		if (localPlayer == null || lastAnimating == 0)
+		{
+			return false;
+		}
+
+		int idlePose = localPlayer.getIdlePoseAnimation();
+		int pose = localPlayer.getPoseAnimation();
+		int animation = localPlayer.getAnimation();
+
+		if (!(animation == IDLE && pose == idlePose))
+		{
+			return false;
+		}
+
+		long now = System.currentTimeMillis();
+		int alarmDelay = config.getIdleAlarmDelay();
+		int maxDuration = config.getIdleAlarmDuration();
+
+		return now - lastAnimating >= alarmDelay
+			&& (maxDuration == 0 || now - lastAnimating <= alarmDelay + maxDuration);
 	}
 }

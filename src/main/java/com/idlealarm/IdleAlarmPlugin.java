@@ -128,11 +128,6 @@ public class IdleAlarmPlugin extends Plugin implements KeyListener, MouseListene
 		{
 			if (config.isSoundEnabled() && config.getIdleAlarmVolume() > 0)
 			{
-				// As playSoundEffect only uses the volume argument when the in-game volume isn't muted, sound effect volume
-				// needs to be set to the value desired for the alarm and afterwards reset to the previous value.
-				Preferences preferences = client.getPreferences();
-				int previousVolume = preferences.getSoundEffectVolume();
-
 				IdleAlarmSound sound = config.getIdleAlarmSound();
 				int soundId = sound == IdleAlarmSound.CUSTOM
 					? config.getCustomSoundId()
@@ -140,11 +135,8 @@ public class IdleAlarmPlugin extends Plugin implements KeyListener, MouseListene
 
 				if (soundId > 0)
 				{
-					preferences.setSoundEffectVolume(config.getIdleAlarmVolume());
 					client.playSoundEffect(soundId, config.getIdleAlarmVolume());
 				}
-
-				preferences.setSoundEffectVolume(previousVolume);
 			}
 
 			lastAlarming = now;
